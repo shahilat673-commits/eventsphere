@@ -8,3 +8,5 @@ razorpay>=1.4
 # Optional DB drivers (pick one if not using SQLite):
 # mysqlclient>=2.2
 # psycopg2-binary>=2.9
+gunicorn
+whitenoise

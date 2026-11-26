@@ -1,0 +1,41 @@
+{% extends 'base.html' %}{% block title %}{{ event.title }}{% endblock %}{% block bot_event %}{{ event.pk }}{% endblock %}{% block content %}
+<div class="row g-4"><div class="col-lg-8">
+ <div class="card reveal">{% include '_banner.html' with e=event h=250 %}
+ <div class="card-body"><span class="badge bg-primary">{{ event.category }}</span> {% if event.seating_enabled %}<span class="badge badge-soft">💺 Reserved seating</span>{% else %}<span class="badge badge-soft">🚪 Open entry</span>{% endif %}<h2 class="mt-2 fw-bold">{{ event.title }}</h2>
+ {% if not event.is_past %}<div class="countdown my-3" data-countdown="{{ event.start|date:'c' }}"></div>{% endif %}
+ <p class="text-muted">📅 {{ event.start|date:"l, d M Y, h:i A" }} – {{ event.end|date:"h:i A" }}<br>📍 {{ event.venue }}, {{ event.city }}<br>🎤 {{ event.speakers|default:"To be announced" }}<br>🏢 {{ event.organiser.organisation|default:event.organiser.display_name }}{% if event.parking_info %}<br>🅿️ {{ event.parking_info }}{% endif %}{% if event.emergency_contact %}<br>🚑 Emergency contact: <b>{{ event.emergency_contact }}</b>{% endif %}</p>
+ <p>{{ event.description|linebreaksbr }}</p>
+ <a class="btn btn-sm btn-success" target="_blank" href="https://wa.me/?text={{ event.title|urlencode }}%20-%20{{ request.build_absolute_uri|urlencode }}">📲 Share on WhatsApp</a>
+ {% if event.schedule %}<h5 class="mt-3">Schedule</h5><pre class="ai">{{ event.schedule }}</pre>{% endif %}</div></div>
+ {% if announcements %}<div class="card mt-3 p-3 reveal border-start border-warning border-4"><h5>📢 Live updates from organiser</h5>{% for a in announcements %}<div class="border-bottom py-1">{{ a.message }} <small class="text-muted">· {{ a.created_at|timesince }} ago</small></div>{% endfor %}</div>{% endif %}
+ {% if feedbacks %}<div class="card mt-3 p-3 reveal"><h5>Attendee feedback {% if avg_rating %}<span class="badge badge-soft ms-1">★ {{ avg_rating }} · {{ rating_count }} rating{{ rating_count|pluralize }}</span>{% endif %}</h5>{% for f in feedbacks %}<div class="border-bottom py-1"><span class="star-static">{% for i in "12345" %}{% if forloop.counter <= f.rating %}★{% else %}<span class="off">★</span>{% endif %}{% endfor %}</span> {{ f.comment }} <small class="text-muted">({{ f.attendee.display_name }})</small></div>{% endfor %}</div>{% endif %}
+ {% if can_feedback %}<div class="card mt-3 p-3 reveal"><h5>⭐ {% if my_feedback %}Your feedback{% else %}Rate your experience{% endif %}</h5><form method="post" action="{% url 'feedback' event.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">{% include '_stars.html' with fb=my_feedback uid=event.pk %}<button class="btn btn-brand btn-sm">{% if my_feedback %}Update{% else %}Submit{% endif %}</button></form></div>{% endif %}
+</div><div class="col-lg-4">
+ <div class="card p-3 mb-3 reveal"><h5>🎟️ Tickets</h5><div class="progress mb-2" style="height:8px"><div class="progress-bar bg-gradient" style="width:{% widthratio event.seats_sold event.seat_limit 100 %}%;background:linear-gradient(90deg,#C6613F,#E9946F)"></div></div><div class="small text-muted mb-2">{{ event.seats_left }} of {{ event.seat_limit }} seats left</div>
+ {% if user.is_authenticated and user.role == 'ATTENDEE' %}
+  {% if event.is_past %}<div class="alert alert-secondary">Event ended.</div>{% else %}
+  {% if event.seating_enabled %}<div class="alert alert-info small py-2">💺 This show has <b>reserved seating</b> - after choosing the ticket type and quantity you will pick your seats on a seat map.</div>
+  <form method="get" action="{% url 'seat_select' event.pk %}">{% else %}<form method="post" action="{% url 'book' event.pk %}">{% csrf_token %}{% endif %}
+  {% for t in ticket_types %}<div class="form-check border rounded p-2 mb-2 {% if not t.left %}opacity-50{% endif %}"><input class="form-check-input ms-0 me-2" type="radio" name="ticket_type" value="{{ t.pk }}" id="t{{ t.pk }}" required {% if not t.left %}disabled{% endif %}>
+   <label for="t{{ t.pk }}" class="form-check-label"><b>{{ t.name }}</b> — {% if t.price == 0 %}Free{% else %}₹{{ t.price|floatformat:0 }}{% endif %}<br><small class="text-muted">{{ t.get_kind_display }} · {{ t.left }} left</small></label></div>
+  {% empty %}<p class="text-muted">Tickets not announced yet.</p>{% endfor %}
+  {% if ticket_types %}<div class="row g-2 mb-3"><div class="col-5"><label class="form-label small">Quantity</label><input class="form-control" type="number" name="quantity" value="1" min="1" max="5"></div><div class="col-7"><label class="form-label small">Coupon (optional)</label><input class="form-control" name="coupon" placeholder="CODE" style="text-transform:uppercase"></div></div><button class="btn btn-brand w-100">{% if event.seating_enabled %}Choose seats →{% else %}Book now{% endif %}</button>{% endif %}</form>{% endif %}
+  {% if has_ticket and not event.is_past %}<a class="btn btn-danger w-100 mt-3" href="{% url 'sos_page' %}">🚨 Need help? Send SOS</a>{% endif %}
+ {% elif user.is_authenticated %}<div class="alert alert-info small mb-0">Only attendee accounts can book tickets.</div>
+ {% else %}{% for t in ticket_types %}<div class="border rounded p-2 mb-2"><b>{{ t.name }}</b> — {% if t.price == 0 %}Free{% else %}₹{{ t.price|floatformat:0 }}{% endif %}</div>{% endfor %}<a class="btn btn-brand w-100" href="{% url 'login' %}?next={{ request.path }}">Login to book</a>{% endif %}</div>
+ {% if user.is_authenticated %}<div class="card p-3 reveal"><h5>🤖 Event Chatbot</h5><div id="chatbox" class="mb-2"></div>
+  <div class="input-group mb-1"><input id="chatq" class="form-control" placeholder="Ask in English / മലയാളം"><button class="btn btn-outline-secondary" id="mic" type="button" title="Voice">🎤</button><button class="btn btn-brand" id="send">Send</button></div>
+  <select id="lang" class="form-select form-select-sm"><option value="en-IN">Voice: English</option><option value="ml-IN">Voice: മലയാളം</option><option value="hi-IN">Voice: हिन्दी</option></select></div>{% endif %}
+</div></div>{% endblock %}
+{% block scripts %}{% if user.is_authenticated %}<script>
+const box=document.getElementById('chatbox'),q=document.getElementById('chatq');
+function add(t,c){const d=document.createElement('div');d.className=c;const s=document.createElement('span');s.textContent=t;d.appendChild(s);box.appendChild(d);box.scrollTop=box.scrollHeight}
+add('Hi! Ask me about timing, venue, tickets or parking.','msg-b');
+async function ask(){const t=q.value.trim();if(!t)return;add(t,'msg-u');q.value='';
+ const r=await fetch("{% url 'chat_api' %}",{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},body:JSON.stringify({question:t,event_id:{{ event.pk }}})});
+ const j=await r.json();const a=j.answer||'Sorry, something went wrong.';add(a,'msg-b');
+ if(window.speechSynthesis){const u=new SpeechSynthesisUtterance(a);u.lang=document.getElementById('lang').value;speechSynthesis.speak(u)}}
+document.getElementById('send').onclick=ask;q.onkeydown=e=>{if(e.key==='Enter')ask()};
+document.getElementById('mic').onclick=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){alert('Voice input needs Chrome/Edge');return}
+ const r=new SR();r.lang=document.getElementById('lang').value;r.onresult=e=>{q.value=e.results[0][0].transcript;ask()};r.start()};
+</script>{% endif %}{% endblock %}

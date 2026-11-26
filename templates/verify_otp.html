@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% load ui_extras %}{% block title %}Verify OTP{% endblock %}{% block content %}
+<div class="auth-wrap"><div class="container"><div class="card mx-auto p-4 p-md-5 text-center reveal" style="max-width:460px"><div class="display-3 pulse d-inline-block mx-auto rounded-circle px-3">📧</div><h3 class="fw-bold mt-3">Verify OTP</h3>
+<p class="text-muted">Enter the 6-digit code we sent to <b>{{ user_obj.email|mask_email }}</b>.<br><small>Not in your inbox? Check the Spam / Promotions folder.</small></p>
+<form method="post">{% csrf_token %}<input class="form-control form-control-lg text-center mb-3 fs-2 fw-bold" style="letter-spacing:.5rem" name="otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" autofocus required>
+<button class="btn btn-brand w-100 btn-lg">Verify</button></form><a class="small mt-3" href="{% url 'resend_otp' %}">Resend OTP</a></div></div></div>{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}{% block title %}Manage {{ event.title }}{% endblock %}{% block content %}
+{% if sos_alerts %}<a href="{% url 'sos_control' %}" class="d-block alert alert-danger fw-bold text-decoration-none">🚨 {{ sos_alerts|length }} active SOS alert(s) for this event – open Control Room →</a>{% endif %}
+<div class="d-flex justify-content-between flex-wrap gap-2"><h3 class="fw-bold">{{ event.title }} {% if event.seating_enabled %}<span class="badge badge-soft fs-6">💺 Reserved seating</span>{% endif %}</h3><div class="d-flex gap-2 flex-wrap">
+<a class="btn btn-outline-primary btn-sm" href="{% url 'event_edit' event.pk %}">Edit</a><a class="btn btn-outline-secondary btn-sm" href="{% url 'event_detail' event.pk %}">Public page</a>
+<a class="btn btn-outline-success btn-sm" href="{% url 'attendee_export' event.pk %}">Export CSV</a>
+<form method="post" action="{% url 'send_reminders' event.pk %}">{% csrf_token %}<button class="btn btn-outline-warning btn-sm">🔔 Send reminders</button></form></div></div>
+<div class="row g-3 my-1"><div class="col-6 col-md-3"><div class="card p-3 reveal"><div class="text-muted">Live registrations</div><div class="stat">{{ event.seats_sold }}/{{ event.seat_limit }}</div></div></div>
+<div class="col-6 col-md-3"><div class="card p-3 reveal"><div class="text-muted">Checked in</div><div class="stat">{{ event.checked_in_count }}</div></div></div>
+<div class="col-6 col-md-3"><div class="card p-3 reveal"><div class="text-muted">Revenue</div><div class="stat">₹{{ event.revenue|floatformat:0 }}</div></div></div>
+<div class="col-6 col-md-3"><div class="card p-3 reveal"><div class="text-muted">Feedback</div><div class="stat">{{ event.feedbacks.count }}</div></div></div></div>
+<div class="row g-3"><div class="col-lg-4"><div class="card p-3 reveal"><h6>📊 Sales by ticket type</h6><canvas id="cSales" height="200"></canvas></div></div>
+<div class="col-lg-3"><div class="card p-3 reveal text-center"><h6>🚪 Check-in progress</h6><canvas id="cIn" height="200"></canvas></div></div>
+<div class="col-lg-5"><div class="card p-3 reveal"><h5>🎟️ Ticket types</h5>
+<table class="table table-sm">{% for t in event.ticket_types.all %}<tr><td>{{ t.name }} <small class="text-muted">({{ t.get_kind_display }})</small></td><td>₹{{ t.price|floatformat:0 }}</td><td>{{ t.sold }}/{{ t.quantity }}</td>
+<td><form method="post" action="{% url 'tickettype_delete' t.pk %}">{% csrf_token %}<button class="btn btn-sm btn-link text-danger p-0">✕</button></form></td></tr>{% empty %}<tr><td class="text-muted">Add a ticket type below.</td></tr>{% endfor %}</table>
+<form method="post" action="{% url 'tickettype_add' event.pk %}" class="row g-2">{% csrf_token %}
+<div class="col-6">{{ tt_form.name }}</div><div class="col-6">{{ tt_form.kind }}</div><div class="col-6">{{ tt_form.price }}</div><div class="col-6">{{ tt_form.quantity }}</div><div class="col-12"><button class="btn btn-brand btn-sm">Add ticket type</button></div></form></div></div></div>
+<div class="row g-3 mt-1"><div class="col-lg-6"><div class="card p-3 reveal"><h5>🤖 AI tools <small class="text-muted fs-6">({{ engine }})</small></h5><div class="d-flex flex-wrap gap-2">
+<form method="post" action="{% url 'event_ai' event.pk 'plan' %}">{% csrf_token %}<button class="btn btn-brand btn-sm">AI Event Planner</button></form>
+<form method="post" action="{% url 'event_ai' event.pk 'content' %}">{% csrf_token %}<button class="btn btn-brand btn-sm">AI Content Writer</button></form>
+<form method="post" action="{% url 'event_ai' event.pk 'demand' %}">{% csrf_token %}<button class="btn btn-brand btn-sm">📈 Demand Predictor</button></form>
+<form method="post" action="{% url 'event_ai' event.pk 'feedback' %}">{% csrf_token %}<button class="btn btn-brand btn-sm">Feedback Analyzer</button></form></div></div></div>
+<div class="col-lg-6"><div class="card p-3 reveal"><h5>📢 Broadcast announcement</h5><form method="post" action="{% url 'announce' event.pk %}" class="input-group">{% csrf_token %}<input class="form-control" name="message" maxlength="300" placeholder="e.g. Session moved to Hall B at 3 PM" required><button class="btn btn-warning">Send to all</button></form>
+{% for a in announcements %}<div class="small text-muted mt-1">• {{ a.message }} ({{ a.created_at|timesince }} ago)</div>{% endfor %}</div></div></div>
+<div class="row g-3 mt-1"><div class="col-lg-6"><div class="card p-3 reveal"><h5>🏷️ Coupon codes</h5>
+<table class="table table-sm">{% for c in coupons %}<tr><td><code>{{ c.code }}</code></td><td>{{ c.percent }}% off</td><td>{{ c.used }}/{% if c.max_uses %}{{ c.max_uses }}{% else %}∞{% endif %} used</td><td><form method="post" action="{% url 'coupon_delete' c.pk %}">{% csrf_token %}<button class="btn btn-sm btn-link text-danger p-0">✕</button></form></td></tr>{% empty %}<tr><td class="text-muted">No coupons yet.</td></tr>{% endfor %}</table>
+<form method="post" action="{% url 'coupon_add' event.pk %}" class="row g-2">{% csrf_token %}<div class="col-5">{{ coupon_form.code }}</div><div class="col-3">{{ coupon_form.percent }}</div><div class="col-4">{{ coupon_form.max_uses }}</div><div class="col-12"><button class="btn btn-brand btn-sm">Create coupon</button></div></form></div></div></div>
+{% if event.demand_forecast %}<div class="card p-3 mt-3 reveal"><h6>📈 Demand forecast & smart pricing</h6><pre class="ai">{{ event.demand_forecast }}</pre></div>{% endif %}
+{% if event.schedule %}<div class="row g-3 mt-1"><div class="col-lg-4"><div class="card p-3 reveal"><h6>📅 Schedule</h6><pre class="ai">{{ event.schedule }}</pre></div></div>
+<div class="col-lg-4"><div class="card p-3 reveal"><h6>✅ Checklist</h6><pre class="ai">{{ event.checklist }}</pre></div></div>
+<div class="col-lg-4"><div class="card p-3 reveal"><h6>💰 Budget (₹)</h6><pre class="ai">{{ event.budget }}</pre></div></div></div>{% endif %}
+{% if event.promo_content %}<div class="card p-3 mt-3 reveal"><h6>✍️ Promotional content</h6><pre class="ai">{{ event.promo_content }}</pre></div>{% endif %}
+{% if event.feedback_summary %}<div class="card p-3 mt-3 reveal"><h6>💬 Feedback summary</h6><pre class="ai">{{ event.feedback_summary }}</pre></div>{% endif %}
+<div class="card p-3 mt-3 reveal"><h5>Attendee list</h5><table class="table table-sm"><thead><tr><th>Name</th><th>Email</th><th>Ticket</th>{% if event.seating_enabled %}<th>Seat</th>{% endif %}<th>Code</th><th>Status</th></tr></thead><tbody>
+{% for t in tickets %}<tr><td>{{ t.holder_name }}</td><td>{{ t.booking.attendee.email }}</td><td>{{ t.booking.ticket_type.name }}</td>{% if event.seating_enabled %}<td>{{ t.seat_label|default:"-" }}</td>{% endif %}<td><code>{{ t.code|slice:":8" }}</code></td><td>{% if t.checked_in %}<span class="badge bg-success">In</span>{% else %}<span class="badge bg-secondary">Pending</span>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="6" class="text-muted">No registrations yet.</td></tr>{% endfor %}</tbody></table></div>
+{{ chart|json_script:"chartdata" }}{% endblock %}
+{% block scripts %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><script>
+const d=JSON.parse(document.getElementById('chartdata').textContent),P=['#D97757','#B5532F','#E9A27F','#7A3B20','#C9B3A6'];
+new Chart(document.getElementById('cSales'),{type:'bar',data:{labels:d.labels,datasets:[{data:d.sold,backgroundColor:P,borderRadius:8}]},options:{plugins:{legend:{display:false}},animation:{duration:1600,easing:'easeOutBounce'},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+new Chart(document.getElementById('cIn'),{type:'doughnut',data:{labels:['Checked in','Not yet','Seats left'],datasets:[{data:[d.checked,d.pending,d.left],backgroundColor:['#D97757','#F0C3A8','#E9E2DD'],borderWidth:0}]},options:{cutout:'68%',animation:{animateRotate:true,duration:1800},plugins:{legend:{position:'bottom',labels:{boxWidth:10}}}}});
+</script>{% endblock %}

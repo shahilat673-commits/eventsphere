@@ -1,0 +1,13 @@
+{% extends 'base.html' %}{% block title %}My Tickets{% endblock %}{% block content %}
+{% if pending %}<div class="alert alert-warning">You have unpaid bookings: {% for p in pending %}<a href="{% url 'checkout' p.pk %}">#{{ p.pk }} {{ p.event.title }}</a> {% endfor %}</div>{% endif %}
+<h3>🎟️ My Tickets</h3><div class="row g-3 mb-4">
+{% for b in bookings %}{% for t in b.tickets.all %}<div class="col-md-6"><div class="card p-3 reveal"><div class="d-flex justify-content-between"><div>
+ <h5>{{ b.event.title }}</h5><div class="small text-muted">{{ b.event.start|date:"d M Y, h:i A" }} · {{ b.event.venue }}<br>{{ b.ticket_type.name }} · Booking #{{ b.pk }}</div>
+ {% if t.seat_label %}<div class="mt-1"><span class="seat-chip">💺 Seat {{ t.seat_label }}</span></div>{% endif %}
+ <div class="mt-2">{% if t.checked_in %}<span class="badge bg-success">Checked in</span>{% else %}<span class="badge bg-secondary">Not used</span>{% endif %}</div></div>
+ <img src="{% url 'ticket_qr' t.code %}" width="110" alt="QR"></div>
+ <div class="mt-2 d-flex gap-2"><a class="btn btn-sm btn-outline-primary" href="{% url 'ticket_detail' t.code %}">Open ticket</a><a class="btn btn-sm btn-outline-danger" href="{% url 'sos_page' %}">🚨 SOS</a>
+ {% if t.checked_in %}<a class="btn btn-sm btn-success" href="{% url 'certificate' t.code %}">📜 Certificate</a>{% endif %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'my_feedback' %}">⭐ Rate</a></div></div></div>{% endfor %}
+{% empty %}<p class="text-muted">No tickets yet. Book an event below!</p>{% endfor %}</div>
+<h4>✨ Recommended for you <small class="text-muted fs-6">(AI smart recommendations)</small></h4>
+<div class="row g-4">{% for r in recs %}<div class="col-md-4">{% include '_event_card.html' with e=r.event why=r.why %}</div>{% empty %}<p class="text-muted">Set your <a href="{% url 'profile' %}">interests</a> to get recommendations.</p>{% endfor %}</div>{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}{% block title %}QR Scanner{% endblock %}{% block content %}
+<h3>📷 QR Check-in Scanner</h3><p class="text-muted">Scan an attendee's e-ticket. Payment status is verified at the gate. Only tickets of <b>your</b> events are accepted.</p>
+<div class="row g-4"><div class="col-md-6"><div class="card p-3 reveal"><div id="reader" style="width:100%"></div>
+<div class="input-group mt-3"><input id="manual" class="form-control" placeholder="…or paste ticket code (demo)"><button id="go" class="btn btn-brand">Verify</button></div></div></div>
+<div class="col-md-6"><div id="result" class="r-warn">Waiting for scan…</div><div id="detail" class="card p-3 mt-3 d-none"></div></div></div>{% endblock %}
+{% block scripts %}<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script><script>
+let busy=false;
+async function verify(code){if(busy)return;busy=true;
+ const r=await fetch("{% url 'scan_api' %}",{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},body:JSON.stringify({code})});
+ const j=await r.json();const el=document.getElementById('result');
+ el.className=j.status==='ok'?'r-ok':(j.status==='duplicate'||j.status==='unpaid'?'r-warn':'r-bad');
+ el.innerHTML=(j.status==='ok'?'✅ ':'❌ ')+j.message;
+ const d=document.getElementById('detail');
+ if(j.name){d.classList.remove('d-none');d.innerHTML='';[['Attendee',j.name],['Event',j.event],['Ticket',j.type],...(j.seat?[['Seat',j.seat]]:[]),['Payment',j.payment+' (₹'+j.amount+')'],['Payment ID',j.payment_id]].forEach(([k,v])=>{const p=document.createElement('div');p.innerHTML='<b></b> <span></span>';p.children[0].textContent=k+':';p.children[1].textContent=v;d.appendChild(p)})}else d.classList.add('d-none');
+ setTimeout(()=>busy=false,2500)}
+document.getElementById('go').onclick=()=>{const v=document.getElementById('manual').value.trim();if(v)verify(v)};
+try{const s=new Html5Qrcode('reader');s.start({facingMode:'environment'},{fps:10,qrbox:240},t=>verify(t)).catch(()=>{document.getElementById('reader').innerHTML='<div class="text-muted">Camera not available – use the code box.</div>'})}catch(e){}
+</script>{% endblock %}

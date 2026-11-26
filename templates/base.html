@@ -1,0 +1,61 @@
+{% load static %}<!doctype html>
+<html lang="en" data-bs-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}EventSphere AI{% endblock %}</title>
+<script>try{var t=localStorage.getItem('evs-theme');if(t)document.documentElement.setAttribute('data-bs-theme',t)}catch(e){}</script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="{% static 'css/style.css' %}" rel="stylesheet">
+</head>
+<body {% if user.is_authenticated and user.role == 'ORGANISER' or user.is_authenticated and user.role == 'ADMIN' %}data-feed="{% url 'sos_feed' %}" data-control="{% url 'sos_control' %}"{% endif %}>
+<div id="loader"><div class="ring"></div></div><div id="progress"></div><div id="glow"></div>
+<div class="bg-blobs"><span></span><span></span><span></span></div><div id="toasts"></div>
+<nav class="navbar navbar-expand-lg navbar-light"><div class="container">
+  <a class="navbar-brand" href="{% url 'home' %}"><span class="logo">🎟️</span> EventSphere AI</a>
+  <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nv"><span class="navbar-toggler-icon"></span></button>
+  <div class="collapse navbar-collapse" id="nv">
+   <ul class="navbar-nav me-auto align-items-lg-center">
+    {% if user.is_authenticated %}
+      {% if user.role == 'ADMIN' %}
+        <li class="nav-item"><a class="nav-link" href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'admin_analytics' %}">Analytics</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'admin_organisers' %}">Organisers</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'admin_categories' %}">Categories</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'admin_payments' %}">Payments</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'admin_report_csv' %}">Report</a></li>
+        <li class="nav-item"><a class="nav-link nav-sos px-3" href="{% url 'sos_control' %}">🚨 SOS Control <span class="sos-badge" {% if not sos_open %}style="display:none"{% endif %}>{{ sos_open }}</span></a></li>
+      {% elif user.role == 'ORGANISER' %}
+        <li class="nav-item"><a class="nav-link" href="{% url 'org_dashboard' %}">My Events</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'event_create' %}">Create Event</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'scanner' %}">QR Scanner</a></li>
+        <li class="nav-item"><a class="nav-link nav-sos px-3" href="{% url 'sos_control' %}">🚨 SOS Control <span class="sos-badge" {% if not sos_open %}style="display:none"{% endif %}>{{ sos_open }}</span></a></li>
+      {% else %}
+        <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Discover</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'my_tickets' %}">My Tickets</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'my_feedback' %}">Feedback</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'profile' %}">Interests</a></li>
+        <li class="nav-item"><a class="nav-link nav-sos px-3" href="{% url 'sos_page' %}">🚨 SOS</a></li>
+      {% endif %}
+    {% else %}<li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Events</a></li>{% endif %}
+   </ul>
+   <div class="d-flex align-items-center gap-2">
+    <button id="themeBtn" class="theme-btn" title="Dark / light mode">🌙</button>
+    {% if user.is_authenticated %}<span class="small d-none d-md-inline">{{ user.display_name }} <span class="badge badge-soft">{{ user.get_role_display }}</span></span>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-outline-brand btn-sm">Logout</button></form>
+    {% else %}<a class="btn btn-outline-brand btn-sm" href="{% url 'login' %}">Login</a><a class="btn btn-brand btn-sm" href="{% url 'register' %}">Register</a>{% endif %}
+   </div></div></div></nav>
+<main class="container py-4">
+  {% for m in messages %}<div class="alert alert-{% if m.tags == 'error' %}danger{% else %}{{ m.tags }}{% endif %} alert-dismissible fade show">{{ m }}<button class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
+  {% block content %}{% endblock %}
+</main>
+{% if user.is_authenticated and user.role == 'ATTENDEE' %}<a class="sos-fab" href="{% url 'sos_page' %}" title="Emergency SOS">SOS</a>
+<button type="button" id="botFab" class="bot-fab" title="Booking help - ask me anything" aria-label="Open booking assistant">💬</button>
+<div id="botPanel" class="bot-panel d-none" data-url="{% url 'assistant_api' %}" data-event="{% block bot_event %}{% endblock %}" role="dialog" aria-label="Booking assistant">
+ <div class="bot-head"><div><b>🤖 Booking Assistant</b><small>Help with booking, seats, payment &amp; tickets</small></div><button type="button" id="botClose" aria-label="Close">✕</button></div>
+ <div id="botMsgs" class="bot-msgs"></div><div id="botChips" class="bot-chips"></div>
+ <form id="botForm" class="bot-input" autocomplete="off"><input id="botInput" maxlength="300" placeholder="Type your question…" aria-label="Your question"><button class="btn btn-brand btn-sm">Send</button></form>
+</div>{% endif %}
+<footer class="text-center text-muted py-3">EventSphere AI · Plan it. Book it. Live it. · Final Year Project</footer>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'js/app.js' %}"></script>
+{% if user.is_authenticated and user.role == 'ATTENDEE' %}<script src="{% static 'js/assistant.js' %}"></script>{% endif %}
+{% block scripts %}{% endblock %}
+</body></html>

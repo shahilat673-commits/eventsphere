@@ -1,0 +1,16 @@
+{% extends 'base.html' %}{% block title %}Payment{% endblock %}{% block content %}
+<div class="rzp card">
+ <div class="rzp-head"><div class="small opacity-75">{% if demo %}Razorpay (DEMO / Test mode){% else %}Razorpay{% endif %}</div><h4 class="mb-0">EventSphere AI</h4><div>{{ b.event.title }} · {{ b.quantity }} × {{ b.ticket_type.name }}</div>{% if b.seats %}<div class="small">💺 Seats: <b>{{ b.seat_list|join:", " }}</b> · held for {{ hold }} min</div>{% endif %}<h2 class="mt-2">₹{{ b.amount|floatformat:2 }}</h2></div>
+ <div class="p-4">
+ {% if demo %}
+  <div class="alert alert-info small">Demo payment — no real money. Card is pre-filled with the Razorpay test card.</div>
+  <label class="form-label">Card number</label><input class="form-control mb-2" value="4111 1111 1111 1111" readonly>
+  <div class="row g-2 mb-3"><div class="col"><input class="form-control" value="12/30" readonly></div><div class="col"><input class="form-control" value="123" readonly></div></div>
+  <form method="post" action="{% url 'demo_pay' b.pk %}" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').innerText='Processing…'">{% csrf_token %}<button class="btn btn-primary w-100 btn-lg">Pay ₹{{ b.amount|floatformat:2 }}</button></form>
+ {% else %}
+  <button id="rzp-btn" class="btn btn-primary w-100 btn-lg">Pay ₹{{ b.amount|floatformat:2 }} with Razorpay</button>
+  <form id="rzp-form" method="post" action="{% url 'pay_verify' %}">{% csrf_token %}<input type="hidden" name="razorpay_payment_id" id="pid"><input type="hidden" name="razorpay_order_id" id="oid"><input type="hidden" name="razorpay_signature" id="sig"></form>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>document.getElementById('rzp-btn').onclick=()=>{new Razorpay({key:"{{ key_id }}",amount:"{{ amount_paise }}",currency:"INR",name:"EventSphere AI",order_id:"{{ b.order_id }}",
+   handler:r=>{pid.value=r.razorpay_payment_id;oid.value=r.razorpay_order_id;sig.value=r.razorpay_signature;document.getElementById('rzp-form').submit()}}).open()}</script>
+ {% endif %}</div></div>{% endblock %}

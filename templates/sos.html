@@ -1,0 +1,38 @@
+{% extends 'base.html' %}{% block title %}Emergency SOS{% endblock %}{% block content %}
+<div class="text-center mb-4 reveal"><div class="display-4">🚨</div><h2 class="fw-bold">Emergency SOS</h2><p class="text-muted">Press and hold the red button for 2 seconds. The event organiser and authorities are alerted instantly with your location.</p></div>
+<div class="row g-4"><div class="col-lg-7"><div class="card p-4 reveal">
+{% if events %}
+ <label class="form-label fw-semibold">Which event are you at?</label><select id="ev" class="form-select mb-3">{% for e in events %}<option value="{{ e.pk }}">{{ e.title }} – {{ e.venue }}</option>{% endfor %}</select>
+ <label class="form-label fw-semibold">What is the emergency?</label>
+ <div class="row g-2 mb-3">{% for v,l in categories %}<div class="col-6 col-md-4"><label class="w-100 h-100"><input class="sos-radio" type="radio" name="cat" value="{{ v }}" {% if forloop.first %}checked{% endif %}><div class="sos-tile">{{ l }}</div></label></div>{% endfor %}</div>
+ <input id="loc" class="form-control mb-2" placeholder="Where exactly? (e.g. Gate 2, Row F, near food court)" maxlength="120">
+ <input id="msg" class="form-control mb-2" placeholder="Describe what happened (optional)" maxlength="300">
+ <button id="gps" class="btn btn-outline-primary btn-sm mb-3" type="button">📍 Share my live location</button> <span id="gpsOk" class="small text-success"></span>
+ <button id="hold" class="hold-btn"><div class="fill"></div><span>🚨 HOLD TO SEND SOS</span></button>
+ <div id="err" class="text-danger small mt-2"></div>
+{% else %}<div class="text-center py-4"><div class="display-5">🎟️</div><p class="mb-2">SOS is available when you hold a valid ticket for a running or upcoming event.</p><a class="btn btn-brand" href="{% url 'home' %}">Browse events</a></div>{% endif %}
+</div></div>
+<div class="col-lg-5"><h5 class="fw-bold">📡 My SOS alerts</h5><div id="mine" class="text-muted">No alerts yet.</div>
+<div class="alert alert-warning mt-3 small">⚠️ Use SOS only for real emergencies. For life-threatening situations also call <b>112</b> (India emergency number).</div></div></div>{% endblock %}
+{% block scripts %}<script>
+let lat=null,lng=null;const hold=document.getElementById('hold');
+document.getElementById('gps')&&(document.getElementById('gps').onclick=()=>{if(!navigator.geolocation){alert('Location not supported');return}
+ navigator.geolocation.getCurrentPosition(p=>{lat=p.coords.latitude;lng=p.coords.longitude;document.getElementById('gpsOk').textContent='✅ Location captured'},()=>alert('Location permission denied – describe your location in the box.'),{enableHighAccuracy:true})});
+async function send(){const err=document.getElementById('err');err.textContent='';
+ const body={event_id:document.getElementById('ev').value,category:document.querySelector('input[name=cat]:checked').value,message:document.getElementById('msg').value,location_text:document.getElementById('loc').value,lat,lng};
+ const r=await fetch("{% url 'sos_send' %}",{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},body:JSON.stringify(body)});const j=await r.json();
+ if(!j.ok){err.textContent=j.error||'Could not send';return}toast(j.duplicate?'You already have an active alert.':'🚨 SOS sent! Help is being notified.',true);load()}
+if(hold){let t0=0,raf,done=false;const fill=hold.querySelector('.fill');
+ function step(){const p=Math.min((performance.now()-t0)/2000,1);fill.style.width=p*100+'%';if(p>=1&&!done){done=true;navigator.vibrate&&navigator.vibrate(200);send();reset();return}raf=requestAnimationFrame(step)}
+ function reset(){cancelAnimationFrame(raf);fill.style.width='0';setTimeout(()=>done=false,1500)}
+ ['mousedown','touchstart'].forEach(e=>hold.addEventListener(e,ev=>{ev.preventDefault();t0=performance.now();done=false;step()}));
+ ['mouseup','mouseleave','touchend','touchcancel'].forEach(e=>hold.addEventListener(e,()=>{if(!done){cancelAnimationFrame(raf);fill.style.width='0'}}))}
+const STEPS=['OPEN','ACK','RESOLVED'],LBL={OPEN:'Sent',ACK:'Help on the way',RESOLVED:'Resolved'};
+async function load(){const r=await fetch("{% url 'sos_mine' %}");const j=await r.json();const c=document.getElementById('mine');if(!j.alerts.length)return;c.innerHTML='';
+ j.alerts.forEach(a=>{const d=document.createElement('div');d.className='sos-status '+a.status;const h=document.createElement('div');h.innerHTML='<b></b><div class="small text-muted"></div>';
+  h.children[0].textContent=a.category_label+' – '+a.event;h.children[1].textContent=a.ago;d.appendChild(h);
+  const sl=document.createElement('div');sl.className='steps-line';STEPS.forEach((s,i)=>{const x=document.createElement('div');if(i<=STEPS.indexOf(a.status))x.className='on';x.textContent=LBL[s];sl.appendChild(x)});d.appendChild(sl);
+  if(a.note){const n=document.createElement('div');n.className='small mt-2';n.textContent='💬 '+(a.responder?a.responder+': ':'')+a.note;d.appendChild(n)}
+  if(a.emergency_contact){const n=document.createElement('div');n.className='small mt-1';n.textContent='📞 Event emergency contact: '+a.emergency_contact;d.appendChild(n)}c.appendChild(d)})}
+load();setInterval(load,4000);
+</script>{% endblock %}

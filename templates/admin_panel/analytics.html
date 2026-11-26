@@ -1,0 +1,42 @@
+{% extends 'base.html' %}{% block title %}Search &amp; Browsing Analytics{% endblock %}{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3"><div><h3 class="fw-bold mb-0">📊 Search &amp; browsing analytics</h3>
+<div class="text-muted">How attendees search and browse events. Sales &amp; revenue charts are on the <a href="{% url 'admin_dashboard' %}">main dashboard</a>.</div></div>
+<div class="range-pills">{% for r in ranges %}<a href="?days={{ r }}" class="{% if r == days %}on{% endif %}">{{ r }} days</a>{% endfor %}</div></div>
+{% if not kpi.views and not kpi.searches %}<div class="alert alert-info">No browsing data yet for the last {{ days }} days. It fills up automatically as attendees search on Discover and open event pages.</div>{% endif %}
+<div class="row g-3 mb-3">
+<div class="col-6 col-lg-3"><div class="card kpi p-3 reveal"><div class="text-muted small">👁️ Event page views</div><div class="v">{{ kpi.views }}</div><div class="small text-muted">{{ kpi.avg_views }} per day · {{ kpi.guest_views }} by guests</div></div></div>
+<div class="col-6 col-lg-3"><div class="card kpi p-3 reveal"><div class="text-muted small">🔍 Searches</div><div class="v">{{ kpi.searches }}</div><div class="small text-muted">{{ kpi.no_result }} with no results</div></div></div>
+<div class="col-6 col-lg-3"><div class="card kpi p-3 reveal"><div class="text-muted small">👥 Logged-in browsers</div><div class="v">{{ kpi.viewers }}</div><div class="small text-muted">distinct users who opened events</div></div></div>
+<div class="col-6 col-lg-3"><div class="card kpi p-3 reveal"><div class="text-muted small">🔥 Most viewed event</div><div class="t mt-2" title="{{ kpi.top_event }}">{{ kpi.top_event }}</div><div class="small text-muted">Top keyword: <b>{{ kpi.top_keyword }}</b></div></div></div></div>
+<div class="card p-3 mb-3 reveal"><h5>📈 Daily browsing vs searching</h5><div class="chart-box"><canvas id="cDaily"></canvas></div></div>
+<div class="row g-3 mb-3"><div class="col-lg-7"><div class="card p-3 h-100 reveal"><h5>🏆 Most viewed events <small class="text-muted fs-6">(bar)</small></h5><div class="chart-box"><canvas id="cTop"></canvas></div></div></div>
+<div class="col-lg-5"><div class="card p-3 h-100 reveal"><h5>🥧 Browsing by category <small class="text-muted fs-6">(pie)</small></h5><div class="chart-box"><canvas id="cCat"></canvas></div></div></div></div>
+<div class="row g-3 mb-3"><div class="col-lg-5"><div class="card p-3 h-100 reveal"><h5>🔎 Top search keywords <small class="text-muted fs-6">(bar)</small></h5><div class="chart-box"><canvas id="cKw"></canvas></div></div></div>
+<div class="col-lg-4"><div class="card p-3 h-100 reveal"><h5>🎯 Searches by category <small class="text-muted fs-6">(pie)</small></h5><div class="chart-box"><canvas id="cSCat"></canvas></div></div></div>
+<div class="col-lg-3"><div class="card p-3 h-100 reveal"><h5>✅ Search success <small class="text-muted fs-6">(doughnut)</small></h5><div class="chart-box"><canvas id="cFound"></canvas></div></div></div></div>
+<div class="row g-3"><div class="col-lg-7"><div class="card p-3 h-100 reveal"><h5>🕒 Busiest hours of the day</h5><div class="chart-box"><canvas id="cHours"></canvas></div></div></div>
+<div class="col-lg-5"><div class="card p-3 h-100 reveal"><h5>Recent searches</h5><table class="table table-sm mb-0"><thead><tr><th>Search</th><th>By</th><th>Results</th></tr></thead>
+{% for s in recent_searches %}<tr><td>{% if s.query %}{{ s.query }}{% endif %}{% if s.category %} <span class="badge badge-soft">{{ s.category }}</span>{% endif %}</td><td class="small">{{ s.user.username|default:"guest" }}</td><td>{% if s.results %}{{ s.results }}{% else %}<span class="text-danger">0</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="3" class="text-muted">No searches yet.</td></tr>{% endfor %}</table></div></div></div>
+{{ chart|json_script:"chartdata" }}{% endblock %}
+{% block scripts %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><script>
+const d=JSON.parse(document.getElementById('chartdata').textContent),
+ P=['#D97757','#E9A27F','#B5532F','#F3C9B1','#8C6A5B','#C9B3A6','#F0B08F','#7A3B20'],
+ dark=document.documentElement.getAttribute('data-bs-theme')==='dark',tick=dark?'#d8c9c1':'#6b5d55',grid=dark?'rgba(255,255,255,.08)':'rgba(120,70,40,.10)';
+Chart.defaults.font.family="Poppins,system-ui,sans-serif";Chart.defaults.color=tick;
+function empty(id,msg){const c=document.getElementById(id),p=c.parentElement;p.innerHTML='<div class="d-flex h-100 align-items-center justify-content-center text-muted small">'+msg+'</div>'}
+const noData=a=>!a||!a.some(v=>v>0),opt={maintainAspectRatio:false,animation:{duration:1400},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:grid}},x:{grid:{display:false}}}};
+// 1. line - daily
+new Chart(cDaily,{type:'line',data:{labels:d.days,datasets:[{label:'Event views',data:d.views_daily,borderColor:'#D97757',backgroundColor:'rgba(217,119,87,.18)',fill:true,tension:.35,pointRadius:3},{label:'Searches',data:d.searches_daily,borderColor:'#7A3B20',backgroundColor:'rgba(122,59,32,.08)',tension:.35,pointRadius:3}]},options:{...opt,plugins:{legend:{position:'top'}}}});
+// 2. bar - top events
+if(noData(d.top_events.values))empty('cTop','No event views yet');else new Chart(cTop,{type:'bar',data:{labels:d.top_events.labels,datasets:[{label:'Views',data:d.top_events.values,backgroundColor:'#D97757',borderRadius:8}]},options:{...opt,plugins:{legend:{display:false}}}});
+// 3. pie - browsing by category
+if(noData(d.by_cat.values))empty('cCat','No views yet');else new Chart(cCat,{type:'pie',data:{labels:d.by_cat.labels,datasets:[{data:d.by_cat.values,backgroundColor:P,borderColor:dark?'#262120':'#fff',borderWidth:2}]},options:{maintainAspectRatio:false,animation:{duration:1400},plugins:{legend:{position:'bottom',labels:{boxWidth:10}}}}});
+// 4. horizontal bar - keywords
+if(noData(d.keywords.values))empty('cKw','No keyword searches yet');else new Chart(cKw,{type:'bar',data:{labels:d.keywords.labels,datasets:[{label:'Searches',data:d.keywords.values,backgroundColor:'#C6613F',borderRadius:8}]},options:{...opt,indexAxis:'y',scales:{x:{beginAtZero:true,ticks:{precision:0},grid:{color:grid}},y:{grid:{display:false}}},plugins:{legend:{display:false}}}});
+// 5. pie - searches by category
+if(noData(d.search_cat.values))empty('cSCat','No category searches yet');else new Chart(cSCat,{type:'pie',data:{labels:d.search_cat.labels,datasets:[{data:d.search_cat.values,backgroundColor:P.slice().reverse(),borderColor:dark?'#262120':'#fff',borderWidth:2}]},options:{maintainAspectRatio:false,animation:{duration:1400},plugins:{legend:{position:'bottom',labels:{boxWidth:10}}}}});
+// 6. doughnut - found vs none
+if(noData(d.found.values))empty('cFound','No searches yet');else new Chart(cFound,{type:'doughnut',data:{labels:d.found.labels,datasets:[{data:d.found.values,backgroundColor:['#D97757','#E4D6CE'],borderWidth:0}]},options:{maintainAspectRatio:false,cutout:'66%',animation:{duration:1400},plugins:{legend:{position:'bottom',labels:{boxWidth:10}}}}});
+// 7. grouped bar - hours
+new Chart(cHours,{type:'bar',data:{labels:d.hours.labels,datasets:[{label:'Event views',data:d.hours.views,backgroundColor:'#D97757',borderRadius:4},{label:'Searches',data:d.hours.searches,backgroundColor:'#7A3B20',borderRadius:4}]},options:{...opt,plugins:{legend:{position:'top'}}}});
+</script>{% endblock %}

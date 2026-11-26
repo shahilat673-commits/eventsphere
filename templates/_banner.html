@@ -1,0 +1,1 @@
+{% load ui_extras %}{% if e.banner %}<img class="event-banner" style="height:{{ h|default:165 }}px" src="{{ e.banner.url }}" alt="">{% else %}<div class="event-banner art art-{{ e|art_kind }}" style="height:{{ h|default:165 }}px" role="img" aria-label="{{ e.category }}">{% with kind=e|art_kind %}{% include '_art.html' %}{% endwith %}</div>{% endif %}

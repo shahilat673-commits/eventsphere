@@ -1,0 +1,28 @@
+{% extends 'base.html' %}{% block title %}SOS Control Room{% endblock %}{% block content %}
+<div class="siren mb-3"></div>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3"><div><h3 class="fw-bold mb-0">🚨 SOS Control Room</h3><div class="text-muted small">Live – refreshes every 4 seconds. {% if user.role == 'ADMIN' %}You see alerts from ALL events (authority view).{% else %}You see alerts from YOUR events.{% endif %}</div></div>
+<div class="btn-group"><button class="btn btn-outline-danger active" id="tabActive">Active</button><button class="btn btn-outline-secondary" id="tabAll">All history</button></div></div>
+<div id="list"><div class="text-muted">Loading…</div></div>{% endblock %}
+{% block scripts %}<script>
+let all=false;const ROLE="{{ user.role }}";
+document.getElementById('tabActive').onclick=e=>{all=false;e.target.classList.add('active');document.getElementById('tabAll').classList.remove('active');load()};
+document.getElementById('tabAll').onclick=e=>{all=true;e.target.classList.add('active');document.getElementById('tabActive').classList.remove('active');load()};
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+async function act(id,a){let note='';if(a==='resolve'||a==='ack'){note=prompt(a==='ack'?'Message to the attendee (optional):':'Resolution note (what was done?)','')||''}
+ const r=await fetch(`/control/sos/${id}/${a}/`,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},body:JSON.stringify({note})});const j=await r.json();if(!j.ok)alert(j.error);load()}
+async function load(){const r=await fetch("{% url 'sos_feed' %}"+(all?'?all=1':''));const j=await r.json();const L=document.getElementById('list');L.innerHTML='';
+ if(!j.alerts.length){const e=el('div','card p-5 text-center');e.appendChild(el('div','display-4','✅'));e.appendChild(el('h5','mt-2','All clear – no active SOS alerts'));L.appendChild(e);return}
+ j.alerts.forEach(a=>{const c=el('div','card sos-card p-3 mb-3 '+a.status);const row=el('div','d-flex justify-content-between flex-wrap gap-2');
+  const left=el('div');left.appendChild(el('h5','fw-bold mb-1',a.category_label+(a.escalated?'  ⬆️ ESCALATED':'')));
+  left.appendChild(el('div','',`👤 ${a.attendee} · 📞 ${a.phone}`));left.appendChild(el('div','',`🎪 ${a.event} (${a.venue})`));
+  if(a.location_text)left.appendChild(el('div','',`📍 ${a.location_text}`));if(a.message)left.appendChild(el('div','fst-italic',`“${a.message}”`));
+  if(a.maps){const m=el('a','btn btn-sm btn-outline-primary mt-2','🗺️ Open live location map');m.href=a.maps;m.target='_blank';left.appendChild(m)}
+  if(a.note)left.appendChild(el('div','small mt-2 text-muted',`💬 ${a.responder}: ${a.note}`));
+  const right=el('div','text-end');const b=el('span','badge '+(a.status==='OPEN'?'bg-danger':a.status==='ACK'?'bg-warning text-dark':'bg-success'),a.status==='OPEN'?'NEW':a.status==='ACK'?'IN PROGRESS':'RESOLVED');
+  right.appendChild(b);right.appendChild(el('div','small text-muted mt-1',a.ago));const bt=el('div','d-flex flex-column gap-1 mt-2');
+  if(a.status==='OPEN'){const x=el('button','btn btn-sm btn-warning','✋ Take charge');x.onclick=()=>act(a.id,'ack');bt.appendChild(x)}
+  if(a.status!=='RESOLVED'){const x=el('button','btn btn-sm btn-success','✅ Mark resolved');x.onclick=()=>act(a.id,'resolve');bt.appendChild(x)}
+  if(a.status!=='RESOLVED'&&!a.escalated&&ROLE==='ORGANISER'){const x=el('button','btn btn-sm btn-outline-danger','⬆️ Escalate to admin');x.onclick=()=>act(a.id,'escalate');bt.appendChild(x)}
+  right.appendChild(bt);row.appendChild(left);row.appendChild(right);c.appendChild(row);L.appendChild(c)})}
+load();setInterval(load,4000);
+</script>{% endblock %}

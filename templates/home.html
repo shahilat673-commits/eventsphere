@@ -1,0 +1,23 @@
+{% extends 'base.html' %}{% block content %}
+<div class="hero p-4 p-md-5 mb-4"><canvas id="particles"></canvas><span class="floaty f1">🎤</span><span class="floaty f2">🎫</span><span class="floaty f3">✨</span>
+<div style="max-width:680px"><div class="badge bg-light text-dark mb-3 pulse">🤖 AI-Powered Event Platform</div>
+<h1>Plan it. Book it. <span class="grad-text">Live it.</span></h1>
+<p class="lead mb-1">Discover <span id="typing" class="typing" data-words='["college fests","workshops","concerts","conferences","tech summits"]'>college fests</span></p>
+<p class="mb-4 opacity-75">QR e-tickets · AI recommendations · Instant check-in · 🚨 Emergency SOS</p>
+<form class="row g-2" method="get"><div class="col-md-5"><input class="form-control" name="q" value="{{ q }}" placeholder="🔍 Search events, city, venue"></div>
+<div class="col-md-4"><select class="form-select" name="category"><option value="">All categories</option>{% for c in categories %}<option value="{{ c.pk }}" {% if cat == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+<div class="col-md-3"><button class="btn btn-light w-100 pulse">Search</button></div></form></div></div>
+<div class="marquee mb-4 reveal"><div class="marquee-track">{% for i in "12"|make_list %}{% for c in categories %}<span>🎯 {{ c.name }}</span>{% endfor %}<span>🎟️ QR Tickets</span><span>🤖 AI Planner</span><span>🚨 SOS Safety</span><span>📜 Certificates</span>{% endfor %}</div></div>
+<div class="strip p-4 mb-5 reveal"><div class="row text-center g-3">
+<div class="col-6 col-md-3"><div class="num" data-count="{{ stats.events }}">0</div><div class="text-muted small">Events hosted</div></div>
+<div class="col-6 col-md-3"><div class="num" data-count="{{ stats.attendees }}">0</div><div class="text-muted small">Happy attendees</div></div>
+<div class="col-6 col-md-3"><div class="num" data-count="{{ stats.tickets }}">0</div><div class="text-muted small">Tickets issued</div></div>
+<div class="col-6 col-md-3"><div class="num" data-count="{{ stats.cities }}">0</div><div class="text-muted small">Cities</div></div></div></div>
+<h4 class="fw-bold mb-3 reveal">🔥 Upcoming events</h4>
+<div class="row g-4 mb-5">{% for e in events %}<div class="col-md-6 col-lg-4">{% include '_event_card.html' %}</div>{% empty %}<p class="text-muted">No upcoming events found.</p>{% endfor %}</div>
+<h4 class="fw-bold text-center mb-3 reveal">How it works</h4>
+<div class="row g-3 mb-4"><div class="col-6 col-md-3 reveal"><div class="step"><div class="ico">🔍</div><b>Discover</b><div class="small text-muted">AI picks events for you</div></div></div>
+<div class="col-6 col-md-3 reveal"><div class="step"><div class="ico">💳</div><b>Book</b><div class="small text-muted">Secure Razorpay payment</div></div></div>
+<div class="col-6 col-md-3 reveal"><div class="step"><div class="ico">📱</div><b>Scan</b><div class="small text-muted">QR entry in seconds</div></div></div>
+<div class="col-6 col-md-3 reveal"><div class="step"><div class="ico">🚨</div><b>Stay safe</b><div class="small text-muted">One-tap SOS to organisers</div></div></div></div>
+{% endblock %}

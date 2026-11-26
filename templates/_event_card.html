@@ -1,0 +1,11 @@
+<div class="card h-100 reveal tilt">
+  {% include '_banner.html' with e=e h=165 %}
+  <div class="card-body">
+    <span class="badge bg-primary-subtle text-primary-emphasis">{{ e.category }}</span>
+    <h5 class="mt-2">{{ e.title }}</h5>
+    <div class="text-muted small">📅 {{ e.start|date:"d M Y, h:i A" }}<br>📍 {{ e.venue }}, {{ e.city }}</div>
+    <div class="mt-2 fw-semibold">{% if e.min_price == 0 %}Free{% elif e.min_price %}From ₹{{ e.min_price|floatformat:0 }}{% else %}Tickets soon{% endif %} · {{ e.seats_left }} seats left</div>
+    {% if why %}<div class="small text-success mt-1">✨ {{ why }}</div>{% endif %}
+  </div>
+  <div class="card-footer bg-transparent border-0"><a class="btn btn-brand btn-sm w-100" href="{% url 'event_detail' e.pk %}">View & Book</a></div>
+</div>

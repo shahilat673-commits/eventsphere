@@ -1,0 +1,33 @@
+{% extends 'base.html' %}{% block title %}Choose seats - {{ event.title }}{% endblock %}{% block bot_event %}{{ event.pk }}{% endblock %}{% block content %}
+<a class="small" href="{% url 'event_detail' event.pk %}">← Back to event</a>
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mt-1 mb-3"><div><h3 class="fw-bold mb-0">💺 Choose your seats</h3>
+<div class="text-muted">{{ event.title }} · {{ event.start|date:"d M Y, h:i A" }} · {{ event.venue }}, {{ event.city }}</div></div>
+<span class="badge badge-soft fs-6">Select exactly {{ qty }} seat{{ qty|pluralize }}</span></div>
+<div class="row g-4"><div class="col-lg-8"><div class="card p-3 p-md-4 reveal">
+ <div class="stage">STAGE / SCREEN</div>
+ <div class="seat-map" id="seatMap">{% for r in rows %}<div class="seat-row"><span class="rl">{{ r.label }}</span>{% for s in r.seats %}<button type="button" class="seat{% if s.gap %} gap{% endif %}" data-seat="{{ s.label }}" {% if s.taken %}disabled title="{{ s.label }} - booked"{% else %}title="Seat {{ s.label }}"{% endif %}>{{ s.label|slice:"1:" }}</button>{% endfor %}<span class="rl">{{ r.label }}</span></div>{% endfor %}</div>
+ <div class="seat-legend mt-3"><span><i></i>Available ({{ free_count }})</span><span><i class="sel"></i>Your selection</span><span><i class="taken"></i>Booked / held ({{ taken_count }})</span></div>
+</div></div>
+<div class="col-lg-4"><div class="card p-3 sticky-sum reveal"><h5>Your booking</h5>
+ <div class="small text-muted">{{ qty }} × {{ tt.name }} ({{ tt.get_kind_display }})</div>
+ <div class="my-2" id="chosen"><span class="text-muted small">No seats selected yet</span></div>
+ <div class="d-flex justify-content-between"><span>Selected</span><b><span id="cnt">0</span> / {{ qty }}</b></div>
+ <div class="d-flex justify-content-between"><span>Total</span><b>{% if free %}Free{% else %}₹<span id="tot">{{ total|floatformat:"-2" }}</span>{% endif %}</b></div>
+ {% if coupon %}<div class="small text-success">Coupon {{ coupon }} will be applied at checkout.</div>{% endif %}
+ <form method="post" action="{% url 'book' event.pk %}" class="mt-3" id="seatForm">{% csrf_token %}
+  <input type="hidden" name="ticket_type" value="{{ tt.pk }}"><input type="hidden" name="quantity" value="{{ qty }}"><input type="hidden" name="coupon" value="{{ coupon }}"><input type="hidden" name="seats" id="seatsInput">
+  <button class="btn btn-brand w-100" id="confirmBtn" disabled>{% if free %}Confirm seats{% else %}Continue to payment{% endif %}</button></form>
+ <div class="small text-muted mt-2">⏱️ Seats are held for {{ hold }} minutes after you continue, so you can finish paying.</div>
+</div></div></div>{% endblock %}
+{% block scripts %}<script>
+(function(){const need={{ qty }},sel=[],btn=document.getElementById('confirmBtn'),chosen=document.getElementById('chosen'),
+ order=[...document.querySelectorAll('.seat')].map(b=>b.dataset.seat);
+function render(){sel.sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+ chosen.innerHTML='';if(!sel.length){chosen.innerHTML='<span class="text-muted small">No seats selected yet</span>'}
+ sel.forEach(s=>{const c=document.createElement('span');c.className='seat-chip';c.textContent=s;chosen.appendChild(c)});
+ document.getElementById('cnt').textContent=sel.length;document.getElementById('seatsInput').value=sel.join(',');btn.disabled=sel.length!==need}
+document.getElementById('seatMap').addEventListener('click',e=>{const b=e.target.closest('.seat');if(!b||b.disabled)return;const s=b.dataset.seat,i=sel.indexOf(s);
+ if(i>-1){sel.splice(i,1);b.classList.remove('sel')}
+ else{if(sel.length>=need){if(window.toast)toast('You can select only '+need+' seat'+(need>1?'s':'')+'. Tap a selected seat to deselect it.');return}sel.push(s);b.classList.add('sel')}render()});
+})();
+</script>{% endblock %}

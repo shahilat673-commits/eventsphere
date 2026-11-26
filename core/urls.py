@@ -1,0 +1,63 @@
+from django.urls import path
+from . import views as v
+
+urlpatterns = [
+    path('', v.home, name='home'),
+    path('events/<int:pk>/', v.event_detail, name='event_detail'),
+    # auth
+    path('register/', v.register, name='register'),
+    path('verify-otp/', v.verify_otp, name='verify_otp'),
+    path('resend-otp/', v.resend_otp, name='resend_otp'),
+    path('login/', v.login_view, name='login'),
+    path('logout/', v.logout_view, name='logout'),
+    path('dashboard/', v.dashboard, name='dashboard'),
+    # attendee
+    path('profile/', v.profile, name='profile'),
+    path('my-tickets/', v.my_tickets, name='my_tickets'),
+    path('tickets/<str:code>/', v.ticket_detail, name='ticket_detail'),
+    path('tickets/<str:code>/qr.png', v.ticket_qr, name='ticket_qr'),
+    path('certificate/<str:code>/', v.certificate, name='certificate'),
+    path('events/<int:pk>/seats/', v.seat_select, name='seat_select'),
+    path('events/<int:pk>/book/', v.book, name='book'),
+    path('checkout/<int:pk>/', v.checkout, name='checkout'),
+    path('pay/demo/<int:pk>/', v.demo_pay, name='demo_pay'),
+    path('pay/verify/', v.pay_verify, name='pay_verify'),
+    path('events/<int:pk>/feedback/', v.feedback, name='feedback'),
+    path('api/chat/', v.chat_api, name='chat_api'),
+    path('api/assistant/', v.assistant_api, name='assistant_api'),
+    path('api/reminders/', v.reminders_api, name='reminders_api'),
+    path('my-feedback/', v.my_feedback, name='my_feedback'),
+    # organiser
+    path('organiser/', v.org_dashboard, name='org_dashboard'),
+    path('organiser/events/new/', v.event_create, name='event_create'),
+    path('organiser/events/<int:pk>/', v.event_manage, name='event_manage'),
+    path('organiser/events/<int:pk>/edit/', v.event_edit, name='event_edit'),
+    path('organiser/events/<int:pk>/tickettype/add/', v.tickettype_add, name='tickettype_add'),
+    path('organiser/tickettype/<int:pk>/delete/', v.tickettype_delete, name='tickettype_delete'),
+    path('organiser/events/<int:pk>/ai/<str:kind>/', v.event_ai, name='event_ai'),
+    path('organiser/events/<int:pk>/export/', v.attendee_export, name='attendee_export'),
+    path('organiser/events/<int:pk>/remind/', v.send_reminders, name='send_reminders'),
+    path('organiser/scan/', v.scanner, name='scanner'),
+    path('organiser/scan/api/', v.scan_api, name='scan_api'),
+    # extras
+    path('tickets/<str:code>/calendar.ics', v.ticket_ics, name='ticket_ics'),
+    path('organiser/events/<int:pk>/coupon/add/', v.coupon_add, name='coupon_add'),
+    path('organiser/coupon/<int:pk>/delete/', v.coupon_delete, name='coupon_delete'),
+    path('organiser/events/<int:pk>/announce/', v.announce, name='announce'),
+    # SOS emergency system
+    path('sos/', v.sos_page, name='sos_page'),
+    path('sos/send/', v.sos_send, name='sos_send'),
+    path('sos/mine/', v.sos_mine, name='sos_mine'),
+    path('control/sos/', v.sos_control, name='sos_control'),
+    path('control/sos/feed/', v.sos_feed, name='sos_feed'),
+    path('control/sos/<int:pk>/<str:action>/', v.sos_action, name='sos_action'),
+    # admin panel
+    path('panel/', v.admin_dashboard, name='admin_dashboard'),
+    path('panel/analytics/', v.admin_analytics, name='admin_analytics'),
+    path('panel/organisers/', v.admin_organisers, name='admin_organisers'),
+    path('panel/organisers/<int:pk>/<str:action>/', v.admin_organiser_action, name='admin_organiser_action'),
+    path('panel/categories/', v.admin_categories, name='admin_categories'),
+    path('panel/categories/<int:pk>/delete/', v.admin_category_delete, name='admin_category_delete'),
+    path('panel/payments/', v.admin_payments, name='admin_payments'),
+    path('panel/reports/bookings.csv', v.admin_report_csv, name='admin_report_csv'),
+]
